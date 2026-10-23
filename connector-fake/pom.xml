@@ -27,5 +27,11 @@
             <artifactId>erp-connector-testkit</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Runs the conformance suite from a test, to prove it fails against broken connectors. -->
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-testkit</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
