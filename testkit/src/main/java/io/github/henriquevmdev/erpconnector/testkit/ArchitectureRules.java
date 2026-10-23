@@ -1,5 +1,6 @@
 package io.github.henriquevmdev.erpconnector.testkit;
 
+import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.lang.ArchRule;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
@@ -14,6 +15,8 @@ public final class ArchitectureRules {
     /** No global state: one connector instance per ERP account must never share data with another. */
     public static final ArchRule NO_MUTABLE_STATIC_FIELDS = fields()
             .that().areStatic()
+            // Compiler-generated fields (e.g. the Eclipse compiler's $SWITCH_TABLE$ caches) are not our state.
+            .and().doNotHaveModifier(JavaModifier.SYNTHETIC)
             .should().beFinal()
             .because("connectors must not hold global state (AGENTS.md, hard rule 3)")
             // Having no static fields at all is the desired state, not an error.

@@ -1,6 +1,7 @@
 package io.github.henriquevmdev.erpconnector.core;
 
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,8 @@ class ArchitectureTest {
     @Test
     void noMutableStaticFields() {
         fields().that().areStatic()
+                // Compiler-generated fields (e.g. the Eclipse compiler's $SWITCH_TABLE$ caches) are not our state.
+                .and().doNotHaveModifier(JavaModifier.SYNTHETIC)
                 .should().beFinal()
                 .because("no global state (AGENTS.md, hard rule 3)")
                 .allowEmptyShould(true)
