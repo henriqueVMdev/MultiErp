@@ -8,7 +8,7 @@ Working name: `erp-connector-lib` (placeholder, final name TBD).
 
 A Java library that connects to third-party ERP systems, reads sales data (orders) and returns it in a single canonical model, so applications that use the library never deal with each ERP's own format. Adding support for a new ERP means writing a connector. Nothing else changes.
 
-Status: in development. Canonical model, connector interface, errors and retry implemented; `testkit` next.
+Status: in development. Canonical model, connector interface, errors, retry and `testkit` implemented; `0.1.0-SNAPSHOT` published to GitHub Packages on every push to `master`.
 
 The library is **stateless** and **framework-free**. It does not persist anything. Whoever uses it stores sync cursors, credentials and tokens, and decides when to run.
 
@@ -60,10 +60,10 @@ Default mode: **you write the code, the maintainer reviews.**
 - Publication later: GitHub Packages first, Maven Central if it makes sense.
 
 ### Build and test
-- `mvn verify` from the root runs every module's tests, including ArchUnit. Use `mvn clean verify` after deleting sources (stale classes in `target/` are still scanned).
+- `mvn verify` from the root runs every module's tests, including ArchUnit. Use `mvn clean verify` after deleting sources (stale classes in `target/` are still scanned). IDEs with the Eclipse compiler write their own classes into `target/`; the static-field rule ignores compiler-generated (synthetic) fields for that reason.
 - Modules: `core`, `testkit`, `connector-fake` (in-memory connector for testing the testkit, not published).
 - ArchUnit rules for connectors live in `testkit` (`ArchitectureRules`); `core` has its own copy in `core/src/test` because it cannot depend on `testkit`.
-- CI: `.github/workflows/ci.yml` (build + gitleaks).
+- CI: `.github/workflows/ci.yml` (build + gitleaks). Publication: `.github/workflows/publish.yml` runs `mvn deploy` on every push to `master` (tests first) and publishes the parent pom, `core` and `testkit`; `connector-fake` is never published. Check a publish locally with `mvn clean deploy -DaltDeploymentRepository=local::file:///<dir>`.
 
 ## 5. Architecture (draft: propose the final design and wait for approval)
 
@@ -105,6 +105,8 @@ Starting point, to be refined from the questions that consumers of the data need
   - an invalid CPF/CNPJ produces an anomaly and does not abort the read;
   - no personal data or token appears in logs or exception messages.
 - Validate the conformance suite first against a fake connector, to prove it fails when it should.
+  Done in `connector-fake`: `FakeConnectorConformanceTest` passes the suite, and `ConformanceSuiteSelfTest` runs it against deliberately broken connectors and checks that exactly the targeted checks fail.
+- How a connector uses it: extend `ConnectorConformanceSuite`, implement `connectorWith(seeds)` (test backend holding those orders, page size 10 or less) and `connectorFailingWith(failure, seed)`; override `applicableFailures()` when a failure cannot happen (a JDBC backend is never rate limited) and `secrets()` with the credentials given to the connector. The suite's test methods are package-private, so a connector test cannot override them to skip a check.
 - Each connector has its own WireMock tests with synthetic fixtures based on the ERP's documentation.
 - **Tests must fail when the code is wrong.** A test that only proves the code runs is not a test.
 - ArchUnit rules: `core` does not depend on connectors, Spring or Jackson; no cyclic dependencies between modules.
@@ -118,8 +120,8 @@ Each step starts only after the maintainer reviewed the previous one.
 - [x] **1. Skeleton.** Module structure, build, CI with tests and secret scan, ArchUnit rules from section 3, minimal README, license, `CHANGELOG.md`.
 - [x] **2. Canonical model.** Design proposal, review, implementation with CPF/CNPJ validation and tests.
 - [x] **3. Connector interface, errors, retry policy.** Proposal, review, implementation. `TokenStore` is written together with the first OAuth connector, not before.
-- [ ] **4. `testkit`.** Conformance suite, validated against a fake connector.
-- [ ] **5. Publish `0.1.0-SNAPSHOT` to GitHub Packages**, so connectors outside this repository can depend on `core` and `testkit`.
+- [x] **4. `testkit`.** Conformance suite, validated against a fake connector.
+- [x] **5. Publish `0.1.0-SNAPSHOT` to GitHub Packages**, so connectors outside this repository can depend on `core` and `testkit`.
 - [ ] **6. First public connector** (Bling or Tiny), subject to rule 7 of section 3. Then the following ones, one at a time.
 - [ ] **7. Documentation.** README with a usage example, a "how to write a connector" guide, a note on how personal data is handled.
 - [ ] **8. Release 0.1.0.**
