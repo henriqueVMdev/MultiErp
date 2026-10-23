@@ -8,7 +8,7 @@ Working name: `erp-connector-lib` (placeholder, final name TBD).
 
 A Java library that connects to third-party ERP systems, reads sales data (orders) and returns it in a single canonical model, so applications that use the library never deal with each ERP's own format. Adding support for a new ERP means writing a connector. Nothing else changes.
 
-Status: in development. Canonical model, connector interface, errors, retry and `testkit` implemented; `0.1.0-SNAPSHOT` published to GitHub Packages on every push to `master`.
+Status: in development. Canonical model, connector interface, errors, retry and `testkit` implemented; `0.1.0-SNAPSHOT` published to GitHub Packages on demand.
 
 The library is **stateless** and **framework-free**. It does not persist anything. Whoever uses it stores sync cursors, credentials and tokens, and decides when to run.
 
@@ -63,7 +63,7 @@ Default mode: **you write the code, the maintainer reviews.**
 - `mvn verify` from the root runs every module's tests, including ArchUnit. Use `mvn clean verify` after deleting sources (stale classes in `target/` are still scanned). IDEs with the Eclipse compiler write their own classes into `target/`; the static-field rule ignores compiler-generated (synthetic) fields for that reason.
 - Modules: `core`, `testkit`, `connector-fake` (in-memory connector for testing the testkit, not published).
 - ArchUnit rules for connectors live in `testkit` (`ArchitectureRules`); `core` has its own copy in `core/src/test` because it cannot depend on `testkit`.
-- CI: `.github/workflows/ci.yml` (build + gitleaks). Publication: `.github/workflows/publish.yml` runs `mvn deploy` on every push to `master` (tests first) and publishes the parent pom, `core` and `testkit`; `connector-fake` is never published. Check a publish locally with `mvn clean deploy -DaltDeploymentRepository=local::file:///<dir>`.
+- CI: `.github/workflows/ci.yml` (build + gitleaks). Publication: `.github/workflows/publish.yml` is run manually by the maintainer (Actions > Publish snapshot > Run workflow); it runs `mvn deploy` (tests first) and publishes the parent pom, `core` and `testkit`; `connector-fake` is never published. Check a publish locally with `mvn clean deploy -DaltDeploymentRepository=local::file:///<dir>`.
 
 ## 5. Architecture (draft: propose the final design and wait for approval)
 

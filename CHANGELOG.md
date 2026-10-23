@@ -19,4 +19,4 @@ The canonical model and the connector interface are the public API: changing the
 - Retry: `RetryPolicy`, `Retrier`, `Sleeper` in `core.retry`.
 - `testkit` (public API, initial): `ConnectorConformanceSuite`, `SeedOrder`, `SyntheticDocuments`; `ArchitectureRules` ignores compiler-generated fields.
 - `connector-fake` (not published): reference `FakeConnector` over an in-memory `FakeErp`, and a self-test proving the suite fails against broken connectors.
-- Publication of `0.1.0-SNAPSHOT` (parent pom, `core`, `testkit`) to GitHub Packages on every push to `master`.
+- Publication of `0.1.0-SNAPSHOT` (parent pom, `core`, `testkit`) to GitHub Packages, run manually.

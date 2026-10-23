@@ -1,9 +1,7 @@
 name: Publish snapshot
 
-# Every push to master that passes the build publishes the current -SNAPSHOT to GitHub Packages.
+# Manual only: Actions > Publish snapshot > Run workflow. Publishes the current -SNAPSHOT to GitHub Packages.
 on:
-  push:
-    branches: [master]
   workflow_dispatch:
 
 permissions:

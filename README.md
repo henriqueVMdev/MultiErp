@@ -25,7 +25,7 @@ mvn verify
 
 ## Using the snapshot
 
-Every push to `master` publishes `0.1.0-SNAPSHOT` of `erp-connector-core` and `erp-connector-testkit` to GitHub Packages.
+`0.1.0-SNAPSHOT` of `erp-connector-core` and `erp-connector-testkit` is published to GitHub Packages on demand (the "Publish snapshot" workflow).
 GitHub Packages requires authentication even for public Maven packages: create a personal access token with the
 `read:packages` scope and add it to `~/.m2/settings.xml` (or to your CI secrets), never to a repository.
 
