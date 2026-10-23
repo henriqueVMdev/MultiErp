@@ -2,7 +2,10 @@ package io.github.henriquevmdev.erpconnector.core.model;
 
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.RecordComponent;
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Currency;
@@ -35,6 +38,22 @@ class OrderTest {
     }
 
     @Test
+    void toStringKeepsNameAndLocation() {
+        // Maintainer's decision: the name and city/UF are not masked (AGENTS.md, hard rule 4 lists document, e-mail, phone).
+        String text = customer().toString();
+
+        assertThat(text).contains("Test Buyer").contains("Campinas").contains("SP");
+    }
+
+    @Test
+    void keepsTheSalesChannelOrderNumberApartFromTheErpNumber() {
+        Order order = order("1", customer(), List.of(), List.of());
+
+        assertThat(order.number()).contains("1001");
+        assertThat(order.channelOrderNumber()).contains("MKT-2000000001");
+    }
+
+    @Test
     void listsAreDefensiveCopies() {
         List<Item> items = new ArrayList<>();
         items.add(item());
@@ -55,20 +74,39 @@ class OrderTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("externalId");
         assertThatThrownBy(() -> new Order("tiny", "1", Optional.empty(), Optional.empty(), Optional.empty(),
-                Optional.empty(), null, unknownChannel(), Optional.empty(), List.of(), List.of(),
+                Optional.empty(), Optional.empty(), null, unknownChannel(), Optional.empty(), List.of(), List.of(),
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), List.of()))
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("status");
     }
 
     @Test
-    void absentIsEmptyNotNull() {
-        assertThatThrownBy(() -> new Customer(Optional.empty(), null, Optional.empty(), Optional.empty(), Optional.empty()))
-                .isInstanceOf(NullPointerException.class);
+    void everyComponentRejectsNull() throws Exception {
+        assertEachComponentRejectsNull(order("1", customer(), List.of(item()), List.of()));
+        assertEachComponentRejectsNull(customer());
+        assertEachComponentRejectsNull(item());
+    }
+
+    /** Rebuilds {@code valid} once per component, with only that component set to null. */
+    private static void assertEachComponentRejectsNull(Record valid) throws Exception {
+        RecordComponent[] components = valid.getClass().getRecordComponents();
+        Class<?>[] types = Arrays.stream(components).map(RecordComponent::getType).toArray(Class<?>[]::new);
+        Constructor<?> constructor = valid.getClass().getDeclaredConstructor(types);
+        for (int i = 0; i < components.length; i++) {
+            Object[] args = new Object[components.length];
+            for (int j = 0; j < components.length; j++) {
+                args[j] = i == j ? null : components[j].getAccessor().invoke(valid);
+            }
+            String name = components[i].getName();
+            assertThatThrownBy(() -> constructor.newInstance(args))
+                    .as("%s.%s = null", valid.getClass().getSimpleName(), name)
+                    .hasRootCauseInstanceOf(NullPointerException.class);
+        }
     }
 
     private static Order order(String externalId, Customer customer, List<Item> items, List<Anomaly> anomalies) {
-        return new Order("tiny", externalId, Optional.of("1001"), Optional.of(LocalDate.of(2026, 10, 1)),
+        return new Order("tiny", externalId, Optional.of("1001"), Optional.of("MKT-2000000001"),
+                Optional.of(LocalDate.of(2026, 10, 1)),
                 Optional.empty(), Optional.empty(),
                 new OrderStatus(OrderStatus.Code.APPROVED, Optional.of("3")), unknownChannel(),
                 Optional.of(customer), items, List.of(), Optional.empty(), Optional.empty(),
@@ -81,7 +119,7 @@ class OrderTest {
 
     private static Customer customer() {
         return new Customer(TaxDocument.parse(CPF), Optional.of("Test Buyer"), Optional.of(EMAIL), Optional.of(PHONE),
-                Optional.of(LocalDate.of(1990, 5, 17)));
+                Optional.of("Campinas"), Optional.of("SP"), Optional.of(LocalDate.of(1990, 5, 17)));
     }
 
     private static Item item() {
