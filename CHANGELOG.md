@@ -10,3 +10,6 @@ The canonical model and the connector interface are the public API: changing the
 - Maven multi-module skeleton: `core`, `testkit`, `connector-fake`.
 - Architecture rules (ArchUnit): `core` is framework-free, no mutable static fields, no package cycles.
 - CI: build, tests and secret scan.
+- Canonical model (public API, initial): `Order`, `Customer`, `TaxDocument`, `Item`, `Payment`, `PaymentMethod`,
+  `Money`, `OrderStatus`, `SalesChannel`, `Anomaly` in `core.model`. Absent data is `Optional.empty()`.
+- `TaxDocuments` in `core.validation`: CPF and CNPJ check digits, including the alphanumeric CNPJ.

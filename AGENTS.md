@@ -69,7 +69,7 @@ Default mode: **you write the code, the maintainer reviews.**
 Starting point, to be refined from the questions that consumers of the data need answered (the maintainer will provide the initial list).
 
 - **Order:** source ERP id, `externalId`, visible order number; `createdDate` (`LocalDate`), plus `createdAt` and `updatedAt` as optional `Instant`s, filled only when the ERP provides a time and zone (Bling and Tiny provide neither, see `docs/research/erp-comparison.md`); canonical status plus the ERP's original status text; **sales channel** (`DIRECT`, `MARKETPLACE`, `UNKNOWN`, plus the raw channel text); customer, items, payments; shipping, total discount, total, currency; optional invoice reference (NF-e access key); list of normalization anomalies.
-- **Customer:** document type (CPF, CNPJ, other, none), digits only, whether the check digits are valid; name; e-mail and phone if provided; birth date if provided (optional, may never exist). No full address for now.
+- **Customer:** document type (CPF, CNPJ, other; absent when none), normalized value (no mask, upper case: CNPJ can be alphanumeric since July 2026), whether the check digits are valid; name; e-mail and phone if provided; birth date if provided (optional, may never exist). No full address for now.
 - **Item:** SKU, description, quantity, unit price, discount, total.
 - **Payment:** method (canonical plus raw text), amount, installments, paid-at if any.
 - Immutable types. "Not provided" is `Optional.empty()`, never null, zero or empty string. The raw ERP payload is **not** kept in the canonical object.
@@ -112,7 +112,7 @@ The connector retries transient failures and rate limits within a bounded, confi
 Each step starts only after the maintainer reviewed the previous one.
 
 - [x] **0. Research.** Result: `docs/research/erp-comparison.md` (Bling, Tiny). Official API documentation of the candidate ERPs the maintainer names, as a comparison table. Check: authentication and token lifetime; rate limits; order listing filters (by update date, not only creation date) and pagination; whether the order detail includes items, payments and customer document, or needs a second call; the field that indicates the sales channel and how reliable it is; webhooks; sandbox or free developer account; API terms of use (is publishing an open-source client allowed? restrictions on storing or passing on data?); API stability.
-- [ ] **1. Skeleton.** Module structure, build, CI with tests and secret scan, ArchUnit rules from section 3, minimal README, license, `CHANGELOG.md`.
+- [x] **1. Skeleton.** Module structure, build, CI with tests and secret scan, ArchUnit rules from section 3, minimal README, license, `CHANGELOG.md`.
 - [ ] **2. Canonical model.** Design proposal, review, implementation with CPF/CNPJ validation and tests.
 - [ ] **3. Connector interface, errors, retry policy.** Proposal, review, implementation.
 - [ ] **4. `testkit`.** Conformance suite, validated against a fake connector.
