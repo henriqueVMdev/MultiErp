@@ -2,16 +2,14 @@ package io.github.henriquevmdev.erpconnector.core.model;
 
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.RecordComponent;
 import java.math.BigDecimal;
-import java.util.Arrays;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Currency;
 import java.util.List;
 import java.util.Optional;
 
+import static io.github.henriquevmdev.erpconnector.core.RecordAssertions.assertEachComponentRejectsNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -85,23 +83,6 @@ class OrderTest {
         assertEachComponentRejectsNull(order("1", customer(), List.of(item()), List.of()));
         assertEachComponentRejectsNull(customer());
         assertEachComponentRejectsNull(item());
-    }
-
-    /** Rebuilds {@code valid} once per component, with only that component set to null. */
-    private static void assertEachComponentRejectsNull(Record valid) throws Exception {
-        RecordComponent[] components = valid.getClass().getRecordComponents();
-        Class<?>[] types = Arrays.stream(components).map(RecordComponent::getType).toArray(Class<?>[]::new);
-        Constructor<?> constructor = valid.getClass().getDeclaredConstructor(types);
-        for (int i = 0; i < components.length; i++) {
-            Object[] args = new Object[components.length];
-            for (int j = 0; j < components.length; j++) {
-                args[j] = i == j ? null : components[j].getAccessor().invoke(valid);
-            }
-            String name = components[i].getName();
-            assertThatThrownBy(() -> constructor.newInstance(args))
-                    .as("%s.%s = null", valid.getClass().getSimpleName(), name)
-                    .hasRootCauseInstanceOf(NullPointerException.class);
-        }
     }
 
     private static Order order(String externalId, Customer customer, List<Item> items, List<Anomaly> anomalies) {
