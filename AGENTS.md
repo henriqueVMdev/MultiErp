@@ -8,7 +8,7 @@ Working name: `erp-connector-lib` (placeholder, final name TBD).
 
 A Java library that connects to third-party ERP systems, reads sales data (orders) and returns it in a single canonical model, so applications that use the library never deal with each ERP's own format. Adding support for a new ERP means writing a connector. Nothing else changes.
 
-Status: planning. Nothing is implemented yet.
+Status: in development. Canonical model implemented; connector interface next.
 
 The library is **stateless** and **framework-free**. It does not persist anything. Whoever uses it stores sync cursors, credentials and tokens, and decides when to run.
 
@@ -16,6 +16,8 @@ The library is **stateless** and **framework-free**. It does not persist anythin
 - `core`: canonical model, connector interface, typed errors, validation utilities (for example CPF/CNPJ check digits).
 - `testkit`: the conformance suite every connector must pass. Published separately so third-party connector authors can reuse it.
 - `connector-<erp>`: one module per ERP.
+
+Connectors for private or in-house systems are not part of this repository. They live in their owners' repositories, depend on `core`, and prove conformance by extending the `testkit` suite.
 
 ### Out of scope for this repository
 Web service, UI, database or any persistence, analytics or insights, data enrichment, multi-tenancy, webhook receiver, Spring Boot starter. These belong to applications that consume the library, not to the library. If a task pulls toward any of them, stop and ask the maintainer.
@@ -28,7 +30,7 @@ Default mode: **you write the code, the maintainer reviews.**
 - **Ask before deciding** anything that becomes public API or is expensive to change: the canonical model, the connector interface, error types, retry policy, sync semantics, module boundaries. Do not decide alone and report afterwards.
 - Decide yourself on small, reversible things: local names, internal package layout, test utilities.
 - Before any step that touches architecture, post a short plan (10 lines max) and wait for confirmation.
-- Small commits, one concern each. Commit messages in English, imperative mood. Tests green before saying a step is done.
+- **The maintainer makes the commits.** Do not commit or push. At the end of each step, hand over the exact git commands: small commits, one concern each, messages in English, imperative mood. Tests green before saying a step is done.
 - New dependency: one-line justification first. Keep `core` as lean as possible.
 - When you finish a step, report what you did, what you decided on your own, and what is pending for the maintainer.
 - Do not state facts about an ERP's API from memory. Read its current official documentation. Mark anything you could not verify as "unverified".
@@ -68,8 +70,8 @@ Default mode: **you write the code, the maintainer reviews.**
 ### Canonical model
 Starting point, to be refined from the questions that consumers of the data need answered (the maintainer will provide the initial list).
 
-- **Order:** source ERP id, `externalId`, visible order number; `createdDate` (`LocalDate`), plus `createdAt` and `updatedAt` as optional `Instant`s, filled only when the ERP provides a time and zone (Bling and Tiny provide neither, see `docs/research/erp-comparison.md`); canonical status plus the ERP's original status text; **sales channel** (`DIRECT`, `MARKETPLACE`, `UNKNOWN`, plus the raw channel text); customer, items, payments; shipping, total discount, total, currency; optional invoice reference (NF-e access key); list of normalization anomalies.
-- **Customer:** document type (CPF, CNPJ, other; absent when none), normalized value (no mask, upper case: CNPJ can be alphanumeric since July 2026), whether the check digits are valid; name; e-mail and phone if provided; birth date if provided (optional, may never exist). No full address for now.
+- **Order:** source ERP id, `externalId`, visible order number, the sales channel's own order number when given (e.g. the marketplace order number); `createdDate` (`LocalDate`), plus `createdAt` and `updatedAt` as optional `Instant`s, filled only when the ERP provides a time and zone (Bling and Tiny provide neither, see `docs/research/erp-comparison.md`); canonical status plus the ERP's original status text; **sales channel** (`DIRECT`, `MARKETPLACE`, `UNKNOWN`, plus the raw channel text); customer, items, payments; shipping, total discount, total, currency; optional invoice reference (NF-e access key); list of normalization anomalies.
+- **Customer:** document type (CPF, CNPJ, other; absent when none), normalized value (no mask, upper case: CNPJ can be alphanumeric since July 2026), whether the check digits are valid; name; e-mail and phone if provided; city and state (UF) if provided, never the full address; birth date if provided (optional, may never exist). `toString()` shows the name and city/UF, masks the rest.
 - **Item:** SKU, description, quantity, unit price, discount, total.
 - **Payment:** method (canonical plus raw text), amount, installments, paid-at if any.
 - Immutable types. "Not provided" is `Optional.empty()`, never null, zero or empty string. The raw ERP payload is **not** kept in the canonical object.
@@ -113,19 +115,20 @@ Each step starts only after the maintainer reviewed the previous one.
 
 - [x] **0. Research.** Result: `docs/research/erp-comparison.md` (Bling, Tiny). Official API documentation of the candidate ERPs the maintainer names, as a comparison table. Check: authentication and token lifetime; rate limits; order listing filters (by update date, not only creation date) and pagination; whether the order detail includes items, payments and customer document, or needs a second call; the field that indicates the sales channel and how reliable it is; webhooks; sandbox or free developer account; API terms of use (is publishing an open-source client allowed? restrictions on storing or passing on data?); API stability.
 - [x] **1. Skeleton.** Module structure, build, CI with tests and secret scan, ArchUnit rules from section 3, minimal README, license, `CHANGELOG.md`.
-- [ ] **2. Canonical model.** Design proposal, review, implementation with CPF/CNPJ validation and tests.
-- [ ] **3. Connector interface, errors, retry policy.** Proposal, review, implementation.
+- [x] **2. Canonical model.** Design proposal, review, implementation with CPF/CNPJ validation and tests.
+- [ ] **3. Connector interface, errors, retry policy.** Proposal, review, implementation. `TokenStore` is written together with the first OAuth connector, not before.
 - [ ] **4. `testkit`.** Conformance suite, validated against a fake connector.
-- [ ] **5. First public connector.** Chosen by the maintainer, subject to rule 7 of section 3. Then the following ones, one at a time.
-- [ ] **6. Documentation.** README with a usage example, a "how to write a connector" guide, a note on how personal data is handled.
-- [ ] **7. Release 0.1.0.**
+- [ ] **5. Publish `0.1.0-SNAPSHOT` to GitHub Packages**, so connectors outside this repository can depend on `core` and `testkit`.
+- [ ] **6. First public connector** (Bling or Tiny), subject to rule 7 of section 3. Then the following ones, one at a time.
+- [ ] **7. Documentation.** README with a usage example, a "how to write a connector" guide, a note on how personal data is handled.
+- [ ] **8. Release 0.1.0.**
 
-Definition of done for the first phase (steps 0 to 5): one public connector reads orders incrementally from a real test account into the canonical model; the conformance suite passes; ArchUnit passes; there are no secrets or real data in the repository.
+Definition of done for the first phase (steps 0 to 5): `core` and `testkit` published as a snapshot; a connector outside this repository passes the conformance suite and reads orders incrementally from a real test system; ArchUnit passes; there are no secrets or real data in the repository.
 
 ## 8. Open decisions (ask the maintainer, do not assume)
 
 - Initial list of questions the canonical model must be able to answer.
-- Which ERP connector comes first, and whether the vendor authorization of rule 7 is in place.
+- Which public ERP connector comes first (Bling or Tiny), and whether the vendor authorization of rule 7 is in place.
 - Final project name and package namespace (placeholders in use until then).
 
 Decided (2026-10-23): license Apache-2.0; tokens through a `TokenStore` implemented by the consumer; absent fields as `Optional`; pagination cursor is an opaque `String`; errors are unchecked, in a `sealed` hierarchy.
