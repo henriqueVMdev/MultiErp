@@ -23,6 +23,49 @@ Requires Java 21 and Maven 3.9+.
 mvn verify
 ```
 
+## Using the snapshot
+
+Every push to `master` publishes `0.1.0-SNAPSHOT` of `erp-connector-core` and `erp-connector-testkit` to GitHub Packages.
+GitHub Packages requires authentication even for public Maven packages: create a personal access token with the
+`read:packages` scope and add it to `~/.m2/settings.xml` (or to your CI secrets), never to a repository.
+
+```xml
+<!-- ~/.m2/settings.xml -->
+<servers>
+  <server>
+    <id>github-multierp</id>
+    <username>YOUR_GITHUB_USER</username>
+    <password>${env.GITHUB_PACKAGES_TOKEN}</password>
+  </server>
+</servers>
+```
+
+```xml
+<!-- your pom.xml -->
+<repositories>
+  <repository>
+    <id>github-multierp</id>
+    <url>https://maven.pkg.github.com/henriqueVMdev/MultiErp</url>
+    <snapshots><enabled>true</enabled></snapshots>
+  </repository>
+</repositories>
+
+<dependencies>
+  <dependency>
+    <groupId>io.github.henriquevmdev</groupId>
+    <artifactId>erp-connector-core</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </dependency>
+  <!-- for connector authors: the conformance suite -->
+  <dependency>
+    <groupId>io.github.henriquevmdev</groupId>
+    <artifactId>erp-connector-testkit</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <scope>test</scope>
+  </dependency>
+</dependencies>
+```
+
 ## License
 
 [Apache-2.0](LICENSE)
