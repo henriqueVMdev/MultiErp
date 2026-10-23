@@ -8,7 +8,7 @@ Working name: `erp-connector-lib` (placeholder, final name TBD).
 
 A Java library that connects to third-party ERP systems, reads sales data (orders) and returns it in a single canonical model, so applications that use the library never deal with each ERP's own format. Adding support for a new ERP means writing a connector. Nothing else changes.
 
-Status: in development. Canonical model implemented; connector interface next.
+Status: in development. Canonical model, connector interface, errors and retry implemented; `testkit` next.
 
 The library is **stateless** and **framework-free**. It does not persist anything. Whoever uses it stores sync cursors, credentials and tokens, and decides when to run.
 
@@ -76,22 +76,23 @@ Starting point, to be refined from the questions that consumers of the data need
 - **Payment:** method (canonical plus raw text), amount, installments, paid-at if any.
 - Immutable types. "Not provided" is `Optional.empty()`, never null, zero or empty string. The raw ERP payload is **not** kept in the canonical object.
 
-### Connector interface (conceptual contract)
-- Identify the ERP and declare capabilities (filter by update date? webhooks? sandbox?).
-- Check the connection: valid credentials, sufficient permissions.
-- List orders incrementally from an update timestamp, paginated, returning a cursor for the next page. The caller stores the cursor.
-- Fetch one order by id.
-- Authentication: many ERPs use OAuth2 with rotating refresh tokens. The library is stateless, so the consumer implements a `TokenStore` interface (proposal, to be confirmed).
+### Connector interface (implemented: `core.connector.ErpConnector`)
+- `info()`: ERP id (the value of `Order.source()`) and capabilities (filter by update date, `updatedAt` in payload, webhooks, sandbox). Never calls the ERP.
+- `checkConnection()`: returns normally, or throws `AuthenticationException` / another `ConnectorException`.
+- `listOrders(changedFrom, changedTo)`: first page of the orders changed in `[changedFrom, changedTo)`, start inclusive, end exclusive. The caller passes `changedTo`, so the library never reads a clock.
+- `listOrders(cursor)`: next page. The cursor is an opaque `String`, valid only for the connector's ERP account. An empty `nextCursor` ends the read.
+- `fetchOrder(externalId)`: one order, or empty.
+- Authentication: OAuth2 connectors will get a `TokenStore` implemented by the consumer, written together with the first OAuth connector.
 
 ### Sync semantics (proposal)
 - At-least-once delivery. The same order can arrive more than once. The consumer deduplicates by (source, `externalId`). When `updatedAt` is present it picks the newest version; when absent, the last read wins.
 - ERPs edit orders after creation, sometimes days later. Consumers should re-read an overlap window (the last N hours) on each sync. The library documents this and does not solve it alone.
 
-### Error taxonomy (proposal)
-Authentication failed (do not retry), rate limited (with wait time if the ERP provides it), transient failure (timeouts, 5xx, retryable), permanent failure (other 4xx), unexpected format (a required field is missing or has a different type; carries which order and which field).
+### Error taxonomy (implemented: `core.error`)
+`sealed` unchecked `ConnectorException` with `retryable()`: `AuthenticationException` (no retry), `RateLimitedException` (optional `retryAfter`), `TransientException` (timeouts, 5xx, deadlocks; retried), `PermanentException` (other 4xx, missing table or column; optional `httpStatus`, empty for non-HTTP connectors), `UnexpectedFormatException` (order id when known, and the field; never its value).
 
-### Retry policy (proposal, to be confirmed)
-The connector retries transient failures and rate limits within a bounded, configurable budget (attempts, exponential backoff with jitter). When the budget is spent, it throws the typed error and the consumer decides. No unbounded loops inside the library.
+### Retry policy (implemented: `core.retry`)
+`Retrier` repeats only retryable failures within a `RetryPolicy` (default: 3 attempts, waits from 1 s up to 30 s, exponential backoff with full jitter). A rate limit's `retryAfter` is obeyed exactly; if it is longer than the maximum wait, the failure is thrown at once. When the budget is spent, the last failure is thrown as is. No unbounded loops.
 
 ## 6. Testing
 
@@ -116,7 +117,7 @@ Each step starts only after the maintainer reviewed the previous one.
 - [x] **0. Research.** Result: `docs/research/erp-comparison.md` (Bling, Tiny). Official API documentation of the candidate ERPs the maintainer names, as a comparison table. Check: authentication and token lifetime; rate limits; order listing filters (by update date, not only creation date) and pagination; whether the order detail includes items, payments and customer document, or needs a second call; the field that indicates the sales channel and how reliable it is; webhooks; sandbox or free developer account; API terms of use (is publishing an open-source client allowed? restrictions on storing or passing on data?); API stability.
 - [x] **1. Skeleton.** Module structure, build, CI with tests and secret scan, ArchUnit rules from section 3, minimal README, license, `CHANGELOG.md`.
 - [x] **2. Canonical model.** Design proposal, review, implementation with CPF/CNPJ validation and tests.
-- [ ] **3. Connector interface, errors, retry policy.** Proposal, review, implementation. `TokenStore` is written together with the first OAuth connector, not before.
+- [x] **3. Connector interface, errors, retry policy.** Proposal, review, implementation. `TokenStore` is written together with the first OAuth connector, not before.
 - [ ] **4. `testkit`.** Conformance suite, validated against a fake connector.
 - [ ] **5. Publish `0.1.0-SNAPSHOT` to GitHub Packages**, so connectors outside this repository can depend on `core` and `testkit`.
 - [ ] **6. First public connector** (Bling or Tiny), subject to rule 7 of section 3. Then the following ones, one at a time.

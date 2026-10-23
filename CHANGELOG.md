@@ -14,3 +14,6 @@ The canonical model and the connector interface are the public API: changing the
   `Money`, `OrderStatus`, `SalesChannel`, `Anomaly` in `core.model`. Absent data is `Optional.empty()`.
 - `TaxDocuments` in `core.validation`: CPF and CNPJ check digits, including the alphanumeric CNPJ.
 - `Order.channelOrderNumber` (the sales channel's own order number) and `Customer.city` / `Customer.state` (UF).
+- Connector interface (public API, initial): `ErpConnector`, `ConnectorInfo`, `OrderPage` in `core.connector`.
+- Typed errors (public API, initial): sealed `ConnectorException` and its five subtypes in `core.error`.
+- Retry: `RetryPolicy`, `Retrier`, `Sleeper` in `core.retry`.
