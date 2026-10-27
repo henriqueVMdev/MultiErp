@@ -6,6 +6,11 @@ The canonical model and the connector interface are the public API: changing the
 
 ## [Unreleased]
 
+### Changed
+- `testkit`: the conformance suite's order ids are digits only (`"1007"` instead of `"order-07"`), so a test backend
+  that keys orders by a number, such as a SQL table, can hold them. `fetchOrder` is also checked with a numeric id that
+  does not exist. Test-only change; the core API is unchanged.
+
 ### Added
 - Maven multi-module skeleton: `core`, `testkit`, `connector-fake`.
 - Architecture rules (ArchUnit): `core` is framework-free, no mutable static fields, no package cycles.

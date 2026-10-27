@@ -127,7 +127,8 @@ public abstract class ConnectorConformanceSuite {
         ErpConnector connector = connectorWith(seeds());
 
         assertThat(connector.fetchOrder(id(7))).map(Order::externalId).contains(id(7));
-        assertThat(connector.fetchOrder("does-not-exist")).isEmpty();
+        assertThat(connector.fetchOrder("999999")).isEmpty();
+        assertThat(connector.fetchOrder("does-not-exist")).as("an id the ERP could never issue").isEmpty();
     }
 
     @Test
@@ -144,7 +145,7 @@ public abstract class ConnectorConformanceSuite {
 
     @Test
     void dataTheErpDoesNotGiveStaysUnknown() {
-        SeedOrder bare = new SeedOrder("bare-1", minute(1), Optional.empty(), Optional.empty(), Optional.empty(),
+        SeedOrder bare = new SeedOrder("2001", minute(1), Optional.empty(), Optional.empty(), Optional.empty(),
                 Optional.empty());
 
         Order order = only(connectorWith(List.of(bare)));
@@ -159,7 +160,7 @@ public abstract class ConnectorConformanceSuite {
     @Test
     void unrecognizedChannelStaysUnknownAndKeepsItsText() {
         String nonsense = "unrecognized-channel-7f3a";
-        SeedOrder odd = new SeedOrder("odd-1", minute(1), Optional.empty(), Optional.empty(), Optional.empty(),
+        SeedOrder odd = new SeedOrder("2002", minute(1), Optional.empty(), Optional.empty(), Optional.empty(),
                 Optional.of(nonsense));
 
         Order order = only(connectorWith(List.of(odd)));
@@ -299,8 +300,9 @@ public abstract class ConnectorConformanceSuite {
                 Optional.of(String.format("55119000%05d", i)), Optional.of("MARKETPLACE"));
     }
 
+    // Digits only: many ERPs (and SQL databases) key orders by a number, so the test backend must be able to store it.
     private static String id(int i) {
-        return String.format("order-%02d", i);
+        return String.valueOf(1_000 + i);
     }
 
     private static Instant minute(int i) {

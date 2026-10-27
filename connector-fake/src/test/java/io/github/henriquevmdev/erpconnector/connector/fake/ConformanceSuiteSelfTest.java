@@ -215,7 +215,7 @@ class ConformanceSuiteSelfTest {
             return new Delegating(good) {
                 @Override
                 public Optional<Order> fetchOrder(String externalId) {
-                    return good.fetchOrder(externalId).or(() -> good.fetchOrder("order-00"));
+                    return good.fetchOrder(externalId).or(() -> good.fetchOrder("1000"));
                 }
             };
         }
